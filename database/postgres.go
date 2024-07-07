@@ -24,9 +24,10 @@ func NewPostgresRepository(connectionString string) (*PostgresRepository, error)
 func (pr *PostgresRepository) InsertUser(ctx context.Context, user *models.User) error {
 	_, err := pr.db.ExecContext(
 		ctx,
-		"INSERT INTO users (id, email) VALUES ($1, $2)",
+		"INSERT INTO users (id, email, hashed_password) VALUES ($1, $2, $3)",
 		user.Id,
 		user.Email,
+		user.HashedPassword,
 	)
 
 	return err
@@ -38,6 +39,22 @@ func (pr *PostgresRepository) GetUserById(ctx context.Context, id string) (*mode
 		return nil, err
 	}
 	defer rows.Close()
+
+	var user models.User
+	for rows.Next() {
+		if err := rows.Scan(user.Id, user.Email); err != nil {
+			return &user, nil
+		}
+	}
+
+	return nil, rows.Err()
+}
+
+func (pr *PostgresRepository) GetUserByEmail(ctx context.Context, email string) (*models.User, error) {
+	rows, err := pr.db.QueryContext(ctx, "SELECT * FROM users WHERE email = $1", email)
+	if err != nil {
+		return nil, err
+	}
 
 	var user models.User
 	for rows.Next() {

@@ -6,17 +6,27 @@ import (
 	"my_rest_api/repository"
 	"my_rest_api/server"
 	"net/http"
+	"time"
 
+	"github.com/golang-jwt/jwt"
 	"github.com/segmentio/ksuid"
+	"golang.org/x/crypto/bcrypt"
 )
 
+const TOKEN_EXP_TIME_HOURS int = 1
+
 type SignUpRequest struct {
-	Email string `json:"email"`
+	Email    string `json:"email"`
+	Password string `json:"password"`
 }
 
 type SignUpResponse struct {
 	Id    string `json:"id"`
 	Email string `json:"email"`
+}
+
+type LoginResponse struct {
+	Token string `json:"token"`
 }
 
 func SignUpHandler(s server.Server) http.HandlerFunc {
@@ -34,9 +44,16 @@ func SignUpHandler(s server.Server) http.HandlerFunc {
 			return
 		}
 
+		hashedPass, err := bcrypt.GenerateFromPassword([]byte(requestObj.Password), bcrypt.DefaultCost)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
 		user := models.User{
-			Id:    newId.String(),
-			Email: requestObj.Email,
+			Id:             newId.String(),
+			Email:          requestObj.Email,
+			HashedPassword: string(hashedPass),
 		}
 
 		err = repository.InsertUser(r.Context(), &user)
@@ -50,5 +67,53 @@ func SignUpHandler(s server.Server) http.HandlerFunc {
 			Id:    user.Id,
 			Email: user.Email,
 		})
+	}
+}
+
+func LoginHandler(s server.Server) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var requestObj SignUpRequest
+		err := json.NewDecoder(r.Body).Decode(&requestObj)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		user, err := repository.GetUserByEmail(r.Context(), requestObj.Email)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		if user == nil {
+			http.Error(w, "invalid credentials", http.StatusUnauthorized)
+			return
+		}
+
+		if err := bcrypt.CompareHashAndPassword([]byte(user.HashedPassword), []byte(requestObj.Password)); err != nil {
+			http.Error(w, "invalid credentials", http.StatusUnauthorized)
+			return
+		}
+
+		claims := models.AppClaims{
+			UserId: user.Id,
+			StandardClaims: jwt.StandardClaims{
+				ExpiresAt: time.Now().Add(time.Hour * time.Duration(TOKEN_EXP_TIME_HOURS)).Unix(),
+			},
+		}
+
+		token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+
+		tokenString, err := token.SignedString([]byte(s.Config().JWTSecret))
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(LoginResponse{
+			Token: tokenString,
+		})
+
 	}
 }

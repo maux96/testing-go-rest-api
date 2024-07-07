@@ -24,7 +24,8 @@ func NewPostgresRepository(connectionString string) (*PostgresRepository, error)
 func (pr *PostgresRepository) InsertUser(ctx context.Context, user *models.User) error {
 	_, err := pr.db.ExecContext(
 		ctx,
-		"INSERT INTO users (email) VALUES ($1, $2)",
+		"INSERT INTO users (id, email) VALUES ($1, $2)",
+		user.Id,
 		user.Email,
 	)
 

@@ -16,7 +16,7 @@ type SignUpRequest struct {
 
 type SignUpResponse struct {
 	Id    string `json:"id"`
-	Email string `json:"string"`
+	Email string `json:"email"`
 }
 
 func SignUpHandler(s server.Server) http.HandlerFunc {
@@ -42,6 +42,7 @@ func SignUpHandler(s server.Server) http.HandlerFunc {
 		err = repository.InsertUser(r.Context(), &user)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
 		}
 
 		w.Header().Set("Content-Type", "application/json")

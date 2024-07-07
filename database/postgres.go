@@ -4,6 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"my_rest_api/models"
+
+	_ "github.com/lib/pq"
 )
 
 type PostgresRepository struct {
@@ -29,7 +31,7 @@ func (pr *PostgresRepository) InsertUser(ctx context.Context, user *models.User)
 	return err
 }
 
-func (pr *PostgresRepository) GetUserById(ctx context.Context, id int64) (*models.User, error) {
+func (pr *PostgresRepository) GetUserById(ctx context.Context, id string) (*models.User, error) {
 	rows, err := pr.db.QueryContext(ctx, "SELECT * FROM users WHERE id = $1", id)
 	if err != nil {
 		return nil, err

@@ -35,7 +35,7 @@ func (pr *PostgresRepository) InsertUser(ctx context.Context, user *models.User)
 }
 
 func (pr *PostgresRepository) GetUserById(ctx context.Context, id string) (*models.User, error) {
-	rows, err := pr.db.QueryContext(ctx, "SELECT * FROM users WHERE id = $1", id)
+	rows, err := pr.db.QueryContext(ctx, "SELECT id, email, hashed_password FROM users WHERE id = $1", id)
 	if err != nil {
 		return nil, err
 	}
@@ -47,7 +47,7 @@ func (pr *PostgresRepository) GetUserById(ctx context.Context, id string) (*mode
 
 	var user models.User
 	for rows.Next() {
-		if err := rows.Scan(&user.Id, &user.Email, &user.HashedPassword); err != nil {
+		if err := rows.Scan(&user.Id, &user.Email, &user.HashedPassword); err == nil {
 			return &user, nil
 		}
 	}

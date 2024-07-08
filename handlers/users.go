@@ -78,7 +78,6 @@ func LoginHandler(s server.Server) http.HandlerFunc {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-
 		user, err := repository.GetUserByEmail(r.Context(), requestObj.Email)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)

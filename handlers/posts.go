@@ -6,13 +6,12 @@ import (
 	"my_rest_api/repository"
 	"my_rest_api/server"
 	"net/http"
-	"strings"
 
-	"github.com/golang-jwt/jwt"
+	"github.com/gorilla/mux"
 	"github.com/segmentio/ksuid"
 )
 
-type InsertPostRequest struct {
+type UpsertPostRequest struct {
 	PostContent string `json:"post_content"`
 }
 type InsertPostResponse struct {
@@ -23,19 +22,14 @@ type InsertPostResponse struct {
 
 func InsertPostHandler(s server.Server) http.HandlerFunc {
   return func(w http.ResponseWriter, r *http.Request) {
-   	var requestObj InsertPostRequest 
+   	var requestObj UpsertPostRequest 
 		err := json.NewDecoder(r.Body).Decode(&requestObj)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 
-    tokenString := strings.TrimSpace(r.Header.Get("Authorization"))
-    token, err := jwt.ParseWithClaims(tokenString, &models.AppClaims{}, func(t *jwt.Token) (interface{}, error) {
-      return []byte(s.Config().JWTSecret), nil
-    })
-
-    if appClaims,ok := token.Claims.(*models.AppClaims); ok && token.Valid {
+    if appClaims, err := GetClaimsFromRequest(s, r) ; err == nil {
 
 		  newId, err := ksuid.NewRandom()
       if err != nil {
@@ -61,8 +55,68 @@ func InsertPostHandler(s server.Server) http.HandlerFunc {
         PostContent:  post.PostContent,
       })
     } else {
-      http.Error(w, "", http.StatusUnauthorized)
+      http.Error(w, err.Error(), http.StatusUnauthorized)
     }
    
+  }
+}
+
+func GetPostByIdHandler(s server.Server) http.HandlerFunc {
+  return func(w http.ResponseWriter, r *http.Request) {
+    params := mux.Vars(r)
+    post, err := repository.GetPostById(r.Context(), params["id"])
+    if (err != nil) {
+      http.Error(w, err.Error(), http.StatusInternalServerError)
+      return
+    }
+     
+    w.Header().Set("Content-Type", "application/json")
+    json.NewEncoder(w).Encode(post)
+  } 
+}
+
+func UpdatePostHandler(s server.Server) http.HandlerFunc {
+  return func(w http.ResponseWriter, r *http.Request) {
+    params := mux.Vars(r)
+
+    var requestObj UpsertPostRequest
+    err := json.NewDecoder(r.Body).Decode(&requestObj)
+    if err != nil {
+      http.Error(w, err.Error(), http.StatusBadRequest)
+      return
+    } 
+
+    appClaims, err := GetClaimsFromRequest(s, r)
+    if err != nil {
+      http.Error(w, err.Error(), http.StatusInternalServerError)
+      return
+    } 
+
+    err = repository.UpdatePost(r.Context(), params["id"], &models.Post{PostContent: requestObj.PostContent, UserId: appClaims.UserId})
+    if err != nil {
+      http.Error(w, err.Error(), http.StatusInternalServerError)
+      return
+    }
+    
+  }
+}
+
+
+func DeletePostHandler(s server.Server) http.HandlerFunc {
+  return func(w http.ResponseWriter, r *http.Request) {
+    params := mux.Vars(r)
+
+    appClaims, err := GetClaimsFromRequest(s, r)
+    if err != nil {
+      http.Error(w, err.Error(), http.StatusInternalServerError)
+      return
+    }
+
+
+    err = repository.DeletePostById(r.Context(), params["id"], appClaims.UserId)
+    if err != nil {
+      http.Error(w, err.Error(), http.StatusInternalServerError)
+      return
+    }
   }
 }

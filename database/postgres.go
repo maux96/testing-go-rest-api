@@ -92,3 +92,47 @@ func (pr *PostgresRepository) InsertPost(ctx context.Context, post *models.Post)
 func (pr *PostgresRepository) Close() error {
 	return pr.db.Close()
 }
+
+func (pr *PostgresRepository) GetPostById(ctx context.Context, id string) (*models.Post, error) {
+	rows, err := pr.db.QueryContext(ctx, "SELECT id, post_content, user_id, created_at FROM posts WHERE id = $1", id)
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		if err := rows.Close(); err != nil {
+			log.Println(err.Error())
+		}
+	}()
+
+	var post models.Post
+	for rows.Next() {
+		if err := rows.Scan(&post.Id, &post.PostContent, &post.UserId, &post.CreatedAt); err == nil {
+			return &post, nil
+		}
+	}
+
+	return nil, rows.Err()
+}
+
+func (pr *PostgresRepository) UpdatePost(ctx context.Context, post_id string,post *models.Post) error  {
+  _, err := pr.db.ExecContext(
+		ctx,
+		"UPDATE posts SET post_content = $1 WHERE id = $2 AND user_id = $3 ",
+		post.PostContent,
+    post_id,
+    post.UserId,
+	)
+
+	return err
+
+
+}
+func (pr *PostgresRepository) DeletePostById(ctx context.Context, post_id string, user_id string) error {
+  _, err := pr.db.ExecContext(
+		ctx,
+		"DELETE FROM posts WHERE id = $1 AND user_id = $2",
+    post_id,
+    user_id,
+	)
+  return err 
+}

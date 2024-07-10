@@ -5,16 +5,19 @@ import (
 	"my_rest_api/models"
 )
 
-type UserRepository interface {
+type Repository interface {
 	InsertUser(ctx context.Context, user *models.User) error
 	GetUserById(ctx context.Context, id string) (*models.User, error)
 	GetUserByEmail(ctx context.Context, email string) (*models.User, error)
+
+  InsertPost(ctx context.Context, post *models.Post) error
+
 	Close() error
 }
 
-var usedRepository UserRepository
+var usedRepository Repository
 
-func SetRepository(repo UserRepository) {
+func SetRepository(repo Repository) {
 	usedRepository = repo
 }
 
@@ -28,6 +31,11 @@ func GetUserById(ctx context.Context, id string) (*models.User, error) {
 
 func GetUserByEmail(ctx context.Context, email string) (*models.User, error) {
 	return usedRepository.GetUserByEmail(ctx, email)
+}
+
+
+func InsertPost(ctx context.Context, post *models.Post) error {
+	return usedRepository.InsertPost(ctx, post)
 }
 
 func Close() error {

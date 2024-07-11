@@ -6,6 +6,7 @@ import (
 	"log"
 	"my_rest_api/database"
 	"my_rest_api/repository"
+	"my_rest_api/websockets"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -19,11 +20,13 @@ type Config struct {
 
 type Server interface {
 	Config() *Config
+  Hub() *websockets.Hub
 }
 
 type Broker struct {
 	config *Config
 	router *mux.Router
+  hub    *websockets.Hub
 }
 
 func (br *Broker) Config() *Config {
@@ -41,10 +44,11 @@ func NewServer(ctx context.Context, config *Config) (br *Broker, err error) {
 		return nil, errors.New("database url is required")
 	}
 
-	broker := &Broker{
-		config: config,
-		router: mux.NewRouter(),
-	}
+  broker := &Broker{
+    config: config,
+    router: mux.NewRouter(),
+    hub: websockets.NewHub(),
+  }
 	return broker, nil
 }
 
@@ -59,8 +63,14 @@ func (b *Broker) Start(binder func(s Server, r *mux.Router)) {
 
 	repository.SetRepository(repo)
 
+  go b.hub.Run()
+
 	log.Println("Staring server on port", b.config.Port)
 	if err := http.ListenAndServe("0.0.0.0:"+b.config.Port, b.router); err != nil {
 		log.Fatalln("Server ListenAndServe", err.Error())
 	}
+}
+
+func (b *Broker) Hub() *websockets.Hub {
+  return b.hub
 }

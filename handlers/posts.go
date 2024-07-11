@@ -6,6 +6,7 @@ import (
 	"my_rest_api/repository"
 	"my_rest_api/server"
 	"net/http"
+	"strconv"
 
 	"github.com/gorilla/mux"
 	"github.com/segmentio/ksuid"
@@ -120,3 +121,24 @@ func DeletePostHandler(s server.Server) http.HandlerFunc {
     }
   }
 }
+
+func ListPostHandlers(s server.Server) http.HandlerFunc {
+  return func(w http.ResponseWriter, r *http.Request) {
+    pageAsString := r.URL.Query().Get("page")
+    var page int64 = 0 
+
+    if p, err := strconv.ParseInt(pageAsString, 10, 64); pageAsString != "" && err == nil {
+      page = int64(p)
+    }
+
+    posts, err := repository.ListPosts(r.Context(), page)
+    if err != nil {
+      http.Error(w, err.Error(), http.StatusInternalServerError)
+    }
+
+    w.Header().Set("Content-Type", "application/json")
+    json.NewEncoder(w).Encode(posts)
+  } 
+}
+
+

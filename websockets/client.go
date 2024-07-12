@@ -1,6 +1,11 @@
 package websockets
 
-import "github.com/gorilla/websocket"
+import (
+	"io"
+	"log"
+
+	"github.com/gorilla/websocket"
+)
 
 
 type Client struct {
@@ -30,3 +35,21 @@ func (c *Client) Write() {
     }
   } 
 }
+
+func (c *Client) ReadFromSocket() {
+    for  {
+        if _, reader, err  := c.socket.NextReader(); err != nil {
+            log.Println("Closing socket with", c.id)
+            c.hub.unregister<-c
+            return
+        } else {
+            data, err := io.ReadAll(reader)
+            if (err != nil) {
+                log.Println("error:", err.Error())
+                continue
+            }
+            log.Println(">", string(data))
+        }
+    }
+}
+

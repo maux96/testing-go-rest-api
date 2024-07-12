@@ -39,12 +39,14 @@ func (hub *Hub) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
   if err != nil {
     log.Println(err.Error())
     http.Error(w, "Could not open websocket connection", http.StatusBadRequest)
+    return
   }
 
   client := NewClient(hub, socket) 
   hub.register <- client
 
   go client.Write()
+  go client.ReadFromSocket()
 }
 
 func (hub *Hub) Run () {

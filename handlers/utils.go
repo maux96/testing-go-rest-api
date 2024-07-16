@@ -6,7 +6,7 @@ import (
 	"my_rest_api/server"
 	"net/http"
 	"strings"
-
+  "strconv"
 	"github.com/golang-jwt/jwt"
 )
 
@@ -25,4 +25,28 @@ func GetClaimsFromRequest(server server.Server, request *http.Request) (*models.
   } else {
     return nil, errors.New("problem in auth token")
   }
+}
+
+func GetPaginationFromRequest(r *http.Request) (int64, int64, error) {
+  var page, pageSize int64 = 0, 0
+
+  pageAsString := r.URL.Query().Get("page")
+  if pageAsString == "" {
+    page = 0
+  } else if p, err := strconv.ParseInt(pageAsString, 10, 64); err != nil {
+    return 0, 0, err 
+  } else  {
+    page = p 
+  }
+
+  pageSizeAsString := r.URL.Query().Get("size")
+  if pageSizeAsString == "" {
+    pageSize = 8 
+  } else if size, err := strconv.ParseInt(pageSizeAsString, 10, 64); err != nil {
+    return 0, 0, err 
+  } else  {
+    pageSize = size 
+  }
+  
+  return page, pageSize, nil
 }

@@ -16,6 +16,7 @@ type Repository interface {
   DeletePostById(ctx context.Context, post_id string, user_id string) error 
 
   ListPosts(ctx context.Context, page int64) ([]*models.Post, error)
+  ListPostsByUser(ctx context.Context, user_id string, page int64) ([]*models.Post, error)
 
 	Close() error
 }
@@ -56,6 +57,9 @@ func DeletePostById(ctx context.Context, post_id string, user_id string) error {
 
 func ListPosts(ctx context.Context, page int64) ([]*models.Post, error) {
   return usedRepository.ListPosts(ctx, page)
+}
+func ListPostsByUser(ctx context.Context, user_id string, page int64) ([]*models.Post, error) {
+  return usedRepository.ListPostsByUser(ctx, user_id, page)
 }
 
 

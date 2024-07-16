@@ -6,7 +6,6 @@ import (
 	"my_rest_api/repository"
 	"my_rest_api/server"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt"
@@ -120,28 +119,21 @@ func LoginHandler(s server.Server) http.HandlerFunc {
 
 func ProfileHandler(s server.Server) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		tokenString := strings.TrimSpace(r.Header.Get("Authorization"))
-		jwtToken, err := jwt.ParseWithClaims(tokenString, &models.AppClaims{}, func(t *jwt.Token) (interface{}, error) {
-			return []byte(s.Config().JWTSecret), nil
-		})
+        claims, err := GetClaimsFromRequest(s, r)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusUnauthorized)
 			return
 		}
 
-		if appClaims, ok := jwtToken.Claims.(*models.AppClaims); ok && jwtToken.Valid {
-			user, err := repository.GetUserById(r.Context(), appClaims.UserId)
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
+        user, err := repository.GetUserById(r.Context(), claims.UserId)
+        if err != nil {
+            http.Error(w, err.Error(), http.StatusInternalServerError)
+            return
+        }
 
-			w.Header().Set("Content-Type", "application/json")
+        w.Header().Set("Content-Type", "application/json")
 
-			user.HashedPassword = ""
-			json.NewEncoder(w).Encode(user)
-		} else {
-			http.Error(w, "problem looking for user", http.StatusInternalServerError)
-		}
+        user.HashedPassword = ""
+        json.NewEncoder(w).Encode(user)
 	}
 }

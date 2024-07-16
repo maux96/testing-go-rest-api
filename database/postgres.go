@@ -172,3 +172,40 @@ func (pr *PostgresRepository) ListPosts(ctx context.Context, page int64) ([]*mod
 }
 
 
+func (pr *PostgresRepository) ListPostsByUser(ctx context.Context, user_id string, page int64) ([]*models.Post, error) { 
+  const LIMIT = 8 
+  rows, err := pr.db.QueryContext(ctx, `
+    SELECT id, post_content, user_id, created_at
+    FROM posts
+    WHERE user_id = $1
+    LIMIT $2
+    OFFSET $3;
+  `, user_id, LIMIT, page * LIMIT)
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		if err := rows.Close(); err != nil {
+			log.Println(err.Error())
+		}
+	}()
+    
+  var posts []*models.Post
+  for rows.Next() {
+    post := models.Post{}
+    err := rows.Scan(&post.Id, &post.PostContent, &post.UserId, &post.CreatedAt)
+    if err != nil {
+      return nil, err
+    }
+    posts = append(posts, &post)
+  }
+
+  if err := rows.Err(); err != nil {
+    return nil, err
+  }  
+
+  return posts, nil
+}
+
+
+

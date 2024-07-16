@@ -45,10 +45,12 @@ func BindRoutes(s server.Server, r *mux.Router) {
 	api.HandleFunc("/profile", handlers.ProfileHandler(s)).Methods(http.MethodGet)
 
 	api.HandleFunc("/posts", handlers.InsertPostHandler(s)).Methods(http.MethodPost)
+	api.HandleFunc("/posts/own", handlers.ListOwnPosts(s)).Methods(http.MethodGet)
 	api.HandleFunc("/posts/{id}", handlers.GetPostByIdHandler(s)).Methods(http.MethodGet)
 	api.HandleFunc("/posts/{id}", handlers.UpdatePostHandler(s)).Methods(http.MethodPut)
 	api.HandleFunc("/posts/{id}", handlers.DeletePostHandler(s)).Methods(http.MethodDelete)
 	api.HandleFunc("/posts", handlers.ListPostHandlers(s)).Methods(http.MethodGet)
+
 
     api.HandleFunc("/ws", s.Hub().HandleWebSocket)
 }
